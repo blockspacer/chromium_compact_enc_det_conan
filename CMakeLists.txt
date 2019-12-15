@@ -38,22 +38,22 @@ else()
   message (FATAL_ERROR "must use conan")
 endif()
 
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/)
+
 find_package(cmake_platform_detection REQUIRED)
 run_cmake_platform_detection()
+# NOTE: perform platform checks before everything else
+include(cmake/PlatformChecks)
 
 find_package(cmake_build_options REQUIRED)
 setup_default_build_type(RELEASE)
 setup_cmake_build_options(RELEASE DEBUG)
-
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/)
 
 set(compact_enc_det_DIR "${CMAKE_CURRENT_SOURCE_DIR}/chromium/third_party/ced/src/")
 
 if (NOT EXISTS "${compact_enc_det_DIR}compact_enc_det/compact_enc_det.h")
   message(FATAL_ERROR "Could not find ced source code.")
 endif()
-
-include(cmake/PlatformChecks)
 
 include(cmake/CommonOptions)
 
