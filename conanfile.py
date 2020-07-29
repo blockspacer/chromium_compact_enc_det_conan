@@ -51,18 +51,16 @@ class chromium_compact_enc_det_conan_project(conan_build_helper.CMakePackage):
       "enable_tsan": [True, False],
       "shared": [True, False],
       "debug": [True, False],
-      "enable_tests": [True, False],
       "enable_sanitizers": [True, False]
     }
 
     default_options = (
-      "enable_ubsan": False,
-      "enable_asan": False,
-      "enable_msan": False,
-      "enable_tsan": False,
+      "enable_ubsan=False",
+      "enable_asan=False",
+      "enable_msan=False",
+      "enable_tsan=False",
       "shared=False",
       "debug=False",
-      "enable_tests=False",
       "enable_sanitizers=False"
       # build
       #"*:shared=False"
@@ -90,7 +88,7 @@ class chromium_compact_enc_det_conan_project(conan_build_helper.CMakePackage):
     # there is no need to define a `source` method. The source folder can be
     # defined like this
     exports_sources = ("LICENSE", "*.md", "include/*", "src/*",
-                       "cmake/*", "CMakeLists.txt", "tests/*", "benchmarks/*",
+                       "cmake/*", "examples/*", "CMakeLists.txt", "tests/*", "benchmarks/*",
                        "scripts/*", "tools/*", "codegen/*", "assets/*",
                        "docs/*", "licenses/*", "patches/*", "resources/*",
                        "submodules/*", "thirdparty/*", "third-party/*",
@@ -115,19 +113,19 @@ class chromium_compact_enc_det_conan_project(conan_build_helper.CMakePackage):
                 raise ConanInvalidConfiguration("sanitizers require llvm_tools")
 
         if self.options.enable_ubsan:
-            if self.options.enable_tests:
+            if self._is_tests_enabled():
               self.options["conan_gtest"].enable_ubsan = True
 
         if self.options.enable_asan:
-            if self.options.enable_tests:
+            if self._is_tests_enabled():
               self.options["conan_gtest"].enable_asan = True
 
         if self.options.enable_msan:
-            if self.options.enable_tests:
+            if self._is_tests_enabled():
               self.options["conan_gtest"].enable_msan = True
 
         if self.options.enable_tsan:
-            if self.options.enable_tests:
+            if self._is_tests_enabled():
               self.options["conan_gtest"].enable_tsan = True
 
     #def source(self):
@@ -139,7 +137,7 @@ class chromium_compact_enc_det_conan_project(conan_build_helper.CMakePackage):
         self.build_requires("cmake_build_options/master@conan/stable")
         self.build_requires("cmake_helper_utils/master@conan/stable")
 
-        if self.options.enable_tests:
+        if self._is_tests_enabled():
             self.build_requires("catch2/[>=2.1.0]@bincrafters/stable")
             self.build_requires("conan_gtest/release-1.10.0@conan/stable")
             self.build_requires("FakeIt/[>=2.0.4]@gasuketsu/stable")
@@ -172,7 +170,7 @@ class chromium_compact_enc_det_conan_project(conan_build_helper.CMakePackage):
 
         add_cmake_option("ENABLE_SANITIZERS", self.options.enable_sanitizers)
 
-        add_cmake_option("ENABLE_TESTS", self.options.enable_tests)
+        add_cmake_option("ENABLE_TESTS", self._is_tests_enabled())
 
         cmake.definitions["ENABLE_UBSAN"] = 'ON'
         if not self.options.enable_ubsan:
@@ -220,7 +218,7 @@ class chromium_compact_enc_det_conan_project(conan_build_helper.CMakePackage):
         # -j flag for parallel builds
         cmake.build(args=["--", "-j%s" % cpu_count])
 
-        if self.options.enable_tests:
+        if self._is_tests_enabled():
           self.output.info('Running tests')
           self.run('ctest --parallel %s' % (cpu_count))
           # TODO: use cmake.test()
