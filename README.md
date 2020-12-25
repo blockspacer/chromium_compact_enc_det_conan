@@ -25,6 +25,9 @@ Build with created conan profile:
 
 ```
 conan create . conan/stable --profile clang
+
+# clean build cache
+conan remove "*" --build --force
 ```
 
 ## HOW TO INSTALL FROM CONAN
