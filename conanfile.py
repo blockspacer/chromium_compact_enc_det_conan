@@ -139,7 +139,7 @@ class chromium_compact_enc_det_conan_project(conan_build_helper.CMakePackage):
 
         if self._is_tests_enabled():
             self.build_requires("catch2/[>=2.1.0]@bincrafters/stable")
-            self.build_requires("conan_gtest/release-1.10.0@conan/stable")
+            self.build_requires("conan_gtest/stable@conan/stable")
             self.build_requires("FakeIt/[>=2.0.4]@gasuketsu/stable")
 
         if self.options.enable_tsan \
