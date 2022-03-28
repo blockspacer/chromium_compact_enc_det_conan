@@ -171,7 +171,7 @@ target_include_directories(${STATIC_LIB_NAME} PRIVATE
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
 )
 
-set_property(TARGET ${STATIC_LIB_NAME} PROPERTY CXX_STANDARD 17)
+#set_property(TARGET ${STATIC_LIB_NAME} PROPERTY CXX_STANDARD 17)
 
 # POSITION_INDEPENDENT_CODE for -fPIC
 # -fPIC may be used to link static library into dynamic one
@@ -298,7 +298,7 @@ else()
 endif()
 
 if(TARGET_EMSCRIPTEN)
-  # use PROPERTY CXX_STANDARD 17
+  # use PROPERTY compiler.cppstd
 else()
   target_compile_features(${STATIC_LIB_NAME}
     PUBLIC cxx_auto_type
