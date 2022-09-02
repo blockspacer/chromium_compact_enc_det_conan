@@ -1,3 +1,8 @@
+from conans import ConanFile, CMake, tools
+import traceback
+import os
+import shutil
+
 import glob
 import os
 from conans import ConanFile, CMake, tools
@@ -55,34 +60,18 @@ class chromium_compact_enc_det_conan_project(conan_build_helper.CMakePackage):
     topics = ('c++')
 
     options = {
-      "enable_ubsan": [True, False],
-      "enable_asan": [True, False],
-      "enable_msan": [True, False],
-      "enable_tsan": [True, False],
-      "shared": [True, False],
-      "debug": [True, False],
-      "enable_sanitizers": [True, False]
+        "shared": [True, False],
+        "debug": [True, False],
+        "enable_sanitizers": [True, False]
     }
 
     default_options = (
-      "enable_ubsan=False",
-      "enable_asan=False",
-      "enable_msan=False",
-      "enable_tsan=False",
-      "shared=False",
-      "debug=False",
-      "enable_sanitizers=False"
-      # build
-      #"*:shared=False"
+        "shared=False",
+        "debug=False",
+        "enable_sanitizers=False"
+        # build
+        #"*:shared=False"
     )
-
-    # sets cmake variables required to use clang 10 from conan
-    def _is_compile_with_llvm_tools_enabled(self):
-      return self._environ_option("COMPILE_WITH_LLVM_TOOLS", default = 'false')
-
-    # installs clang 10 from conan
-    def _is_llvm_tools_enabled(self):
-      return self._environ_option("ENABLE_LLVM_TOOLS", default = 'false')
 
     # Custom attributes for Bincrafters recipe conventions
     _source_subfolder = "."
@@ -106,38 +95,6 @@ class chromium_compact_enc_det_conan_project(conan_build_helper.CMakePackage):
 
     settings = "os", "compiler", "build_type", "arch"
 
-    def configure(self):
-        lower_build_type = str(self.settings.build_type).lower()
-
-        if lower_build_type != "release" and not self._is_llvm_tools_enabled():
-            self.output.warn('enable llvm_tools for Debug builds')
-
-        if self._is_compile_with_llvm_tools_enabled() and not self._is_llvm_tools_enabled():
-            raise ConanInvalidConfiguration("llvm_tools must be enabled")
-
-        if self.options.enable_ubsan \
-           or self.options.enable_asan \
-           or self.options.enable_msan \
-           or self.options.enable_tsan:
-            if not self._is_llvm_tools_enabled():
-                raise ConanInvalidConfiguration("sanitizers require llvm_tools")
-
-        if self.options.enable_ubsan:
-            if self._is_tests_enabled():
-              self.options["conan_gtest"].enable_ubsan = True
-
-        if self.options.enable_asan:
-            if self._is_tests_enabled():
-              self.options["conan_gtest"].enable_asan = True
-
-        if self.options.enable_msan:
-            if self._is_tests_enabled():
-              self.options["conan_gtest"].enable_msan = True
-
-        if self.options.enable_tsan:
-            if self._is_tests_enabled():
-              self.options["conan_gtest"].enable_tsan = True
-
     #def source(self):
     #  url = "https://github.com/....."
     #  self.run("git clone %s ......." % url)
@@ -151,16 +108,6 @@ class chromium_compact_enc_det_conan_project(conan_build_helper.CMakePackage):
             self.build_requires("catch2/[>=2.1.0]@bincrafters/stable")
             self.build_requires("conan_gtest/stable@conan/stable")
             self.build_requires("FakeIt/[>=2.0.4]@gasuketsu/stable")
-
-        if self.options.enable_tsan \
-            or self.options.enable_msan \
-            or self.options.enable_asan \
-            or self.options.enable_ubsan:
-          self.build_requires("cmake_sanitizers/master@conan/stable")
-
-        # provides clang-tidy, clang-format, IWYU, scan-build, etc.
-        if self._is_llvm_tools_enabled():
-          self.build_requires("llvm_tools/master@conan/stable")
 
     def requirements(self):
         self.requires("chromium_build_util/master@conan/stable")
@@ -182,56 +129,40 @@ class chromium_compact_enc_det_conan_project(conan_build_helper.CMakePackage):
 
         add_cmake_option("ENABLE_TESTS", self._is_tests_enabled())
 
-        cmake.definitions["ENABLE_UBSAN"] = 'ON'
-        if not self.options.enable_ubsan:
-            cmake.definitions["ENABLE_UBSAN"] = 'OFF'
-
-        cmake.definitions["ENABLE_ASAN"] = 'ON'
-        if not self.options.enable_asan:
-            cmake.definitions["ENABLE_ASAN"] = 'OFF'
-
-        cmake.definitions["ENABLE_MSAN"] = 'ON'
-        if not self.options.enable_msan:
-            cmake.definitions["ENABLE_MSAN"] = 'OFF'
-
-        cmake.definitions["ENABLE_TSAN"] = 'ON'
-        if not self.options.enable_tsan:
-            cmake.definitions["ENABLE_TSAN"] = 'OFF'
-
-        self.add_cmake_option(cmake, "COMPILE_WITH_LLVM_TOOLS", self._is_compile_with_llvm_tools_enabled())
-
         cmake.configure(build_folder=self._build_subfolder)
 
         return cmake
 
     def package(self):
-        self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
-        cmake = self._configure_cmake()
-        cmake.install()
+        with tools.vcvars(self.settings, only_diff=False): # https://github.com/conan-io/conan/issues/6577
+            self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
+            cmake = self._configure_cmake()
+            cmake.install()
 
     def build(self):
-        cmake = self._configure_cmake()
-        if self.settings.compiler == 'gcc':
-            cmake.definitions["CMAKE_C_COMPILER"] = "gcc-{}".format(
-                self.settings.compiler.version)
-            cmake.definitions["CMAKE_CXX_COMPILER"] = "g++-{}".format(
-                self.settings.compiler.version)
+        with tools.vcvars(self.settings, only_diff=False): # https://github.com/conan-io/conan/issues/6577
+            cmake = self._configure_cmake()
+            if self.settings.compiler == 'gcc':
+                cmake.definitions["CMAKE_C_COMPILER"] = "gcc-{}".format(
+                    self.settings.compiler.version)
+                cmake.definitions["CMAKE_CXX_COMPILER"] = "g++-{}".format(
+                    self.settings.compiler.version)
 
-        #cmake.definitions["CMAKE_TOOLCHAIN_FILE"] = 'conan_paths.cmake'
+            #cmake.definitions["CMAKE_TOOLCHAIN_FILE"] = 'conan_paths.cmake'
 
-        # The CMakeLists.txt file must be in `source_folder`
-        cmake.configure(source_folder=".")
+            # The CMakeLists.txt file must be in `source_folder`
+            cmake.configure(source_folder=".")
 
-        cpu_count = tools.cpu_count()
-        self.output.info('Detected %s CPUs' % (cpu_count))
+            cpu_count = tools.cpu_count()
+            self.output.info('Detected %s CPUs' % (cpu_count))
 
-        # -j flag for parallel builds
-        cmake.build(args=["--", "-j%s" % cpu_count])
+            # -j flag for parallel builds
+            cmake.build(args=["--", "-j%s" % cpu_count])
 
-        if self._is_tests_enabled():
-          self.output.info('Running tests')
-          self.run('ctest --parallel %s' % (cpu_count))
-          # TODO: use cmake.test()
+            if self._is_tests_enabled():
+                self.output.info('Running tests')
+                self.run('ctest --parallel %s' % (cpu_count))
+                # TODO: use cmake.test()
 
     # Importing files copies files from the local store to your project.
     def imports(self):
